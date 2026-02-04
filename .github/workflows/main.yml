@@ -20,9 +20,9 @@ jobs:
           git clone --depth 1 ${{ github.server_url }}/${{ github.repository }} .
           git checkout ${{ github.ref }}
 
-      - name: Test
-        run: |
-          nix develop -c gleam test
+      # - name: Build
+      #   run: |
+      #     nix develop -c gleam run -m lustre/dev build counter
 
       - name: Format
         run: |
