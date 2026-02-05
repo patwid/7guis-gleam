@@ -24,13 +24,15 @@
       {
         devShells = {
           default = pkgs.mkShellNoCC {
-            buildInputs = with pkgs; [
-              gleam
-              nodejs
-              erlang
-              rebar3
-              inotify-tools
-            ];
+            buildInputs = builtins.attrValues {
+              inherit (pkgs)
+                gleam
+                bun
+                erlang
+                rebar3
+                inotify-tools
+                ;
+            };
           };
         };
 
