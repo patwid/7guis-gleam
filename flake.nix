@@ -28,6 +28,7 @@
               inherit (pkgs)
                 gleam
                 bun
+                nodejs
                 erlang
                 rebar3
                 inotify-tools
