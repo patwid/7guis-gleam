@@ -98,12 +98,7 @@ fn update(model: Model, msg: Msg) -> Model {
       Model(..model, person: Person(..model.person, lastname:))
 
     UserUpdatedQuery(query) -> {
-      Model(
-        ..model,
-        query: query,
-        selected: None,
-        person: Person(firstname: "", lastname: ""),
-      )
+      Model(..model, query:)
     }
   }
 }
