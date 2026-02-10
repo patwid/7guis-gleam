@@ -21,25 +21,26 @@ jobs:
 
       - name: Build
         run: |
-          docker run --rm \
+          docker run --rm -i \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
             -e NIX_CONFIG='experimental-features = nix-command flakes pipe-operators' \
-          nixos/nix:latest sh -c '
-            set -e
+          nixos/nix:latest sh <<'EOF'
+          set -e
 
-            owner=${{ github.repository_owner }}
-            repo=${{ github.repository }}
-            repo="${repo#$owner/}"
+          git config --global --add safe.directory $(pwd)
 
-            git config --global --add safe.directory $(pwd)
-            for file in src/*.gleam; do
-              task=$(basename "$file" .gleam)
-              echo "Building task: $task"
-              nix develop -c gleam run -m lustre/dev build --minify --outdir=public/$task $task
-              nix develop -c sed -i "s|/$task.js|/$repo/$task/$task.js|" public/$task/index.html
-            done
-          '
+          owner=${{ github.repository_owner }}
+          repo=${{ github.repository }}
+          repo="${repo#$owner/}"
+
+          for file in src/*.gleam; do
+            task=$(basename "$file" .gleam)
+            echo "Building task: $task"
+            nix develop -c gleam run -m lustre/dev build --minify --outdir="public/$task" "$task"
+            nix develop -c sed -i "s|/$task.js|/$repo/$task/$task.js|" "public/$task/index.html"
+          done
+          EOF
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
