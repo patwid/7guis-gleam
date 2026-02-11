@@ -41,12 +41,18 @@ fn update(model: Model, msg: Msg) -> Model {
   case msg {
     UserUpdatedCelsius(temperature) -> #(temperature, case temperature {
       Number(value) -> Number(to_fahrenheit(value))
+      // The specification requires: When the user enters a non-numerical
+      // string into TC the value in TF is not updated and vice versa.
+      // Otherwise, Text("") could be returned, in this case.
       Text(_) -> fahrenheit
     })
 
     UserUpdatedFahrenheit(temperature) -> #(
       case temperature {
         Number(value) -> Number(to_celsius(value))
+        // The specification requires: When the user enters a non-numerical
+        // string into TC the value in TF is not updated and vice versa.
+        // Otherwise, Text("") could be returned, in this case.
         Text(_) -> celsius
       },
       temperature,
