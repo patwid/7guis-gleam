@@ -68,7 +68,8 @@ fn do_init_dialog() -> Nil
 
 type Msg {
   UserCreatedCircle(Position)
-  UserSelectedCircle(Position)
+  UserHoveredCanvas(Position)
+  UserLeftCanvas
   UserOpenedDialog(Dialog)
   UserClosedMenu
   UserUpdatedRadius(Int)
@@ -90,10 +91,31 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       effect.none(),
     )
 
-    UserSelectedCircle(center) -> #(
-      Model(..model, selected: Some(center)),
-      effect.none(),
-    )
+    UserHoveredCanvas(position) ->
+      case model.dialog {
+        Some(_) -> #(model, effect.none())
+        None -> {
+          let nearest =
+            model.present
+            |> dict.filter(is_inside_circle(position))
+            |> dict.to_list
+            |> list.sort(min_distance(position))
+            |> list.first
+            |> result.map(pair.first)
+            |> option.from_result
+
+          case nearest == model.selected {
+            True -> #(model, effect.none())
+            False -> #(Model(..model, selected: nearest), effect.none())
+          }
+        }
+      }
+
+    UserLeftCanvas ->
+      case model.dialog {
+        Some(_) -> #(model, effect.none())
+        None -> #(Model(..model, selected: None), effect.none())
+      }
 
     UserOpenedDialog(dialog) -> #(
       Model(..model, dialog: Some(dialog)),
@@ -178,20 +200,10 @@ fn view(model: Model) -> Element(Msg) {
         attribute.styles([#("outline", "1px solid")]),
         attribute.attribute("width", "500"),
         attribute.attribute("height", "500"),
-        event.on(
-          "click",
-          handle_canvas_clicked(
-            model,
-            fn(center) { decode.success(UserSelectedCircle(center)) },
-            fn(position) { decode.success(UserCreatedCircle(position)) },
-          ),
-        ),
-        event.on(
-          "contextmenu",
-          handle_canvas_clicked(model, handle_circle_context(model), fn(_) {
-            decode.failure(UserClickedRedo, "")
-          }),
-        )
+        event.on("mousemove", handle_mouse_move()),
+        event.on_mouse_leave(UserLeftCanvas),
+        event.on("click", handle_canvas_click(model)),
+        event.on("contextmenu", handle_context_menu(model))
           |> event.prevent_default,
       ],
       circles(model),
@@ -303,33 +315,26 @@ fn circle(selected: Option(Position)) -> fn(Circle) -> Element(Msg) {
   }
 }
 
-fn handle_circle_context(model: Model) -> fn(Position) -> Decoder(Msg) {
-  fn(center) {
-    case model.selected {
-      Some(selected) if center == selected ->
-        decode.success(UserOpenedDialog(Menu))
-      _ -> decode.failure(UserClickedRedo, "")
-    }
+fn handle_mouse_move() -> Decoder(Msg) {
+  use x <- decode.field("offsetX", decode.int)
+  use y <- decode.field("offsetY", decode.int)
+  decode.success(UserHoveredCanvas(#(x, y)))
+}
+
+fn handle_canvas_click(model: Model) -> Decoder(Msg) {
+  use x <- decode.field("offsetX", decode.int)
+  use y <- decode.field("offsetY", decode.int)
+  case model.selected {
+    Some(_) -> decode.failure(UserClickedRedo, "")
+    None -> decode.success(UserCreatedCircle(#(x, y)))
   }
 }
 
-fn handle_canvas_clicked(
-  model: Model,
-  circle_msg: fn(Position) -> Decoder(Msg),
-  empty_msg: fn(Position) -> Decoder(Msg),
-) -> Decoder(Msg) {
-  use x <- decode.field("offsetX", decode.int)
-  use y <- decode.field("offsetY", decode.int)
-  let position = #(x, y)
-
-  model.present
-  |> dict.filter(is_inside_circle(position))
-  |> dict.to_list
-  |> list.sort(min_distance(position))
-  |> list.first
-  |> result.map(pair.first)
-  |> result.map(circle_msg)
-  |> result.unwrap(empty_msg(position))
+fn handle_context_menu(model: Model) -> Decoder(Msg) {
+  case model.selected {
+    Some(_) -> decode.success(UserOpenedDialog(Menu))
+    None -> decode.failure(UserClickedRedo, "")
+  }
 }
 
 fn is_inside_circle(position: Position) -> fn(Position, Int) -> Bool {
