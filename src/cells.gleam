@@ -14,6 +14,10 @@ import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
 
+const num_cols = 26
+
+const num_rows = 100
+
 // --- Types ---
 
 type CellRef {
@@ -143,10 +147,10 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
 fn next_cell(ref: CellRef, shift: Bool) -> CellRef {
   case shift {
     False ->
-      case ref.col < 25 {
+      case ref.col < num_cols - 1 {
         True -> CellRef(ref.col + 1, ref.row)
         False ->
-          case ref.row < 99 {
+          case ref.row < num_rows - 1 {
             True -> CellRef(0, ref.row + 1)
             False -> CellRef(0, 0)
           }
@@ -156,8 +160,8 @@ fn next_cell(ref: CellRef, shift: Bool) -> CellRef {
         True -> CellRef(ref.col - 1, ref.row)
         False ->
           case ref.row > 0 {
-            True -> CellRef(25, ref.row - 1)
-            False -> CellRef(25, 99)
+            True -> CellRef(num_cols - 1, ref.row - 1)
+            False -> CellRef(num_cols - 1, num_rows - 1)
           }
       }
   }
@@ -495,7 +499,7 @@ fn parse_cell_ref(parser: Parser) -> Result(#(CellRef, Parser), Nil) {
           let #(row_str, parser) = consume_digits(parser)
           case int.parse(row_str) {
             Ok(row) ->
-              case row >= 0 && row <= 99 {
+              case row >= 0 && row <= num_rows - 1 {
                 True -> Ok(#(CellRef(col, row), parser))
                 False -> Error(Nil)
               }
@@ -779,7 +783,7 @@ fn view(model: Model) -> Element(Msg) {
 
 fn view_header() -> Element(Msg) {
   let cols =
-    list.range(0, 25)
+    list.range(0, num_cols - 1)
     |> list.map(fn(col) {
       html.th(
         [
@@ -823,7 +827,7 @@ fn view_header() -> Element(Msg) {
 
 fn view_body(model: Model) -> Element(Msg) {
   let rows =
-    list.range(0, 99)
+    list.range(0, num_rows - 1)
     |> list.map(fn(row) { view_row(model, row) })
 
   html.tbody([], rows)
@@ -831,7 +835,7 @@ fn view_body(model: Model) -> Element(Msg) {
 
 fn view_row(model: Model, row: Int) -> Element(Msg) {
   let cells =
-    list.range(0, 25)
+    list.range(0, num_cols - 1)
     |> list.map(fn(col) { view_cell(model, CellRef(col, row)) })
 
   html.tr([], [
